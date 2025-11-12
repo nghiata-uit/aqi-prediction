@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Models
+*.pkl
+*.h5
+*.pb
+
+# Data
+*.csv
+!sample_data.csv
+
+# Results
+results/*.png
+results/*.jpg
+
+# IDE
+.vscode/
+.idea/
+*.swp

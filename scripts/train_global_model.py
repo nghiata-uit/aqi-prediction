@@ -164,7 +164,7 @@ def main():
     
     # 2. Feature engineering (bao gồm spatial features)
     logger.info("\n🔧 Feature Engineering")
-    df_featured, spatial_scaler = engineer_features(df)
+    df_featured, spatial_scaler = engineer_features(df, include_spatial=True)
     
     # 3. Chuẩn bị X và y
     # Loại bỏ các cột không phải features

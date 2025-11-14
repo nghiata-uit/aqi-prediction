@@ -4,6 +4,7 @@ Sử dụng artifacts đã train (model, scaler, feature_columns)
 """
 import sys
 from pathlib import Path
+import datetime
 
 # Thêm thư mục gốc vào Python path
 project_root = Path(__file__).parent.parent
@@ -51,6 +52,9 @@ class PredictionInput(BaseModel):
     class Config:
         schema_extra = {
             "example": {
+                # Note: In the sample data, lon and lat columns appear to be swapped
+                # lon=10.804 is actually latitude, lat=106.7075 is actually longitude
+                # We use the values as they appear in the data for consistency
                 "lat": 106.7075,
                 "lon": 10.804,
                 "co": 704.51,
@@ -180,7 +184,6 @@ async def predict_aqi(input_data: PredictionInput):
         df_for_features = historical_data.tail(100).copy()
         
         # Append input data vào cuối (giả sử là next timestamp)
-        import datetime
         last_datetime = df_for_features['datetime'].max()
         next_datetime = last_datetime + pd.Timedelta(hours=1)
         
@@ -191,7 +194,7 @@ async def predict_aqi(input_data: PredictionInput):
         df_combined = pd.concat([df_for_features, new_row], ignore_index=True)
         
         # Feature engineering với spatial scaler đã có
-        df_featured, _ = engineer_features(df_combined, spatial_scaler=spatial_scaler)
+        df_featured, _ = engineer_features(df_combined, spatial_scaler=spatial_scaler, include_spatial=True)
         
         # Lấy row cuối cùng (là prediction row)
         last_row = df_featured.iloc[-1:][feature_cols]

@@ -133,23 +133,31 @@ def create_spatial_features(df: pd.DataFrame, spatial_scaler: Optional[StandardS
     return df_new, spatial_scaler
 
 
-def engineer_features(df: pd.DataFrame, spatial_scaler: Optional[StandardScaler] = None) -> Tuple[pd.DataFrame, StandardScaler]:
+def engineer_features(df: pd.DataFrame, spatial_scaler: Optional[StandardScaler] = None, 
+                      include_spatial: bool = False) -> Tuple[pd.DataFrame, Optional[StandardScaler]]:
     """
-    Pipeline feature engineering hoàn chỉnh bao gồm cả spatial features
+    Pipeline feature engineering hoàn chỉnh
     
     Args:
         df: DataFrame đầu vào
         spatial_scaler: StandardScaler cho spatial features (nếu có), dùng cho inference
+        include_spatial: Có tạo spatial features không (mặc định False để tương thích ngược)
         
     Returns:
-        Tuple (DataFrame với tất cả features đã được tạo, StandardScaler cho spatial features)
+        Tuple (DataFrame với tất cả features đã được tạo, StandardScaler cho spatial features hoặc None)
+        
+    Note:
+        - Nếu include_spatial=False, trả về (df, None) để tương thích với code cũ
+        - Nếu include_spatial=True, tạo spatial features và trả về (df, scaler)
     """
     logger.info("🚀 Starting feature engineering pipeline...")
     
     df_featured = df.copy()
+    fitted_spatial_scaler = None
     
-    # 1. Create spatial features (trước khi tạo time features)
-    df_featured, fitted_spatial_scaler = create_spatial_features(df_featured, spatial_scaler)
+    # 1. Create spatial features (nếu được yêu cầu)
+    if include_spatial:
+        df_featured, fitted_spatial_scaler = create_spatial_features(df_featured, spatial_scaler)
     
     # 2. Create time features
     df_featured = create_time_features(df_featured)
@@ -168,6 +176,16 @@ def engineer_features(df: pd.DataFrame, spatial_scaler: Optional[StandardScaler]
     
     # 6. Drop rows with NaN values created by lag/rolling features
     original_rows = len(df_featured)
+    df_featured = df_featured.dropna().reset_index(drop=True)
+    dropped_rows = original_rows - len(df_featured)
+    
+    logger.info(f"✅ Feature engineering completed")
+    logger.info(f"   Original rows: {original_rows}")
+    logger.info(f"   Dropped rows (NaN): {dropped_rows}")
+    logger.info(f"   Final rows: {len(df_featured)}")
+    logger.info(f"   Total features: {len(df_featured.columns)}")
+    
+    return df_featured, fitted_spatial_scaler
     df_featured = df_featured.dropna().reset_index(drop=True)
     dropped_rows = original_rows - len(df_featured)
     

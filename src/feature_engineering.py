@@ -3,7 +3,8 @@ Module tạo features cho model dự đoán AQI
 """
 import pandas as pd
 import numpy as np
-from typing import List
+from typing import List, Tuple, Optional
+from sklearn.preprocessing import StandardScaler
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -98,36 +99,74 @@ def create_rolling_features(df: pd.DataFrame, columns: List[str], windows: List[
     return df_new
 
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+def create_spatial_features(df: pd.DataFrame, spatial_scaler: Optional[StandardScaler] = None) -> Tuple[pd.DataFrame, StandardScaler]:
     """
-    Pipeline feature engineering hoàn chỉnh
+    Tạo spatial features và chuẩn hóa tọa độ địa lý (lat, lon)
+    
+    Args:
+        df: DataFrame đầu vào với cột 'lat' và 'lon'
+        spatial_scaler: StandardScaler đã fit trước đó (để inference), nếu None sẽ tạo mới
+        
+    Returns:
+        Tuple (DataFrame với spatial features đã chuẩn hóa, StandardScaler đã fit)
+    """
+    df_new = df.copy()
+    
+    # Kiểm tra xem có cột lat và lon không
+    if 'lat' in df_new.columns and 'lon' in df_new.columns:
+        # Nếu chưa có scaler, tạo mới và fit
+        if spatial_scaler is None:
+            spatial_scaler = StandardScaler()
+            df_new[['lat_scaled', 'lon_scaled']] = spatial_scaler.fit_transform(df_new[['lat', 'lon']])
+            logger.info("✅ Created and fitted spatial scaler for lat/lon features")
+        else:
+            # Sử dụng scaler đã fit trước đó (cho inference)
+            df_new[['lat_scaled', 'lon_scaled']] = spatial_scaler.transform(df_new[['lat', 'lon']])
+            logger.info("✅ Applied existing spatial scaler to lat/lon features")
+        
+        # Xóa cột lat/lon gốc để tránh data leakage
+        df_new = df_new.drop(columns=['lat', 'lon'])
+    else:
+        logger.warning("⚠️  lat/lon columns not found, skipping spatial features")
+        spatial_scaler = None
+    
+    return df_new, spatial_scaler
+
+
+def engineer_features(df: pd.DataFrame, spatial_scaler: Optional[StandardScaler] = None) -> Tuple[pd.DataFrame, StandardScaler]:
+    """
+    Pipeline feature engineering hoàn chỉnh bao gồm cả spatial features
     
     Args:
         df: DataFrame đầu vào
+        spatial_scaler: StandardScaler cho spatial features (nếu có), dùng cho inference
         
     Returns:
-        DataFrame với tất cả features đã được tạo
+        Tuple (DataFrame với tất cả features đã được tạo, StandardScaler cho spatial features)
     """
     logger.info("🚀 Starting feature engineering pipeline...")
     
     df_featured = df.copy()
     
-    # 1. Create time features
+    # 1. Create spatial features (trước khi tạo time features)
+    df_featured, fitted_spatial_scaler = create_spatial_features(df_featured, spatial_scaler)
+    
+    # 2. Create time features
     df_featured = create_time_features(df_featured)
     
-    # 2. Define pollutant columns
+    # 3. Define pollutant columns
     pollutant_cols = ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']
     available_pollutants = [col for col in pollutant_cols if col in df_featured.columns]
     
-    # 3. Create lag features (1h, 2h, 3h, 6h, 12h, 24h)
+    # 4. Create lag features (1h, 2h, 3h, 6h, 12h, 24h)
     lags = [1, 2, 3, 6, 12, 24]
     df_featured = create_lag_features(df_featured, available_pollutants, lags)
     
-    # 4. Create rolling features (6h, 12h, 24h)
+    # 5. Create rolling features (6h, 12h, 24h)
     windows = [6, 12, 24]
     df_featured = create_rolling_features(df_featured, available_pollutants, windows)
     
-    # 5. Drop rows with NaN values created by lag/rolling features
+    # 6. Drop rows with NaN values created by lag/rolling features
     original_rows = len(df_featured)
     df_featured = df_featured.dropna().reset_index(drop=True)
     dropped_rows = original_rows - len(df_featured)
@@ -138,4 +177,4 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info(f"   Final rows: {len(df_featured)}")
     logger.info(f"   Total features: {len(df_featured.columns)}")
     
-    return df_featured
+    return df_featured, fitted_spatial_scaler

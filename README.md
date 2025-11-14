@@ -39,14 +39,22 @@ aqi-prediction/
 │   ├── .gitkeep
 │   ├── random_forest.pkl        # Random Forest model
 │   ├── xgboost.pkl              # XGBoost model
-│   └── scaler.pkl               # StandardScaler
+│   ├── scaler.pkl               # StandardScaler
+│   ├── xgboost_global.pkl       # Global XGBoost với spatial features
+│   ├── feature_columns_global.pkl  # Feature names cho global model
+│   └── spatial_scaler.pkl       # Spatial scaler cho lat/lon
 ├── src/
 │   ├── __init__.py
 │   ├── data_preprocessing.py    # Xử lý và làm sạch dữ liệu
-│   ├── feature_engineering.py   # Tạo features
+│   ├── feature_engineering.py   # Tạo features (bao gồm spatial features)
 │   ├── model_training.py        # Train models
 │   ├── model_evaluation.py      # Đánh giá models
 │   └── prediction.py            # Dự đoán 24h
+├── scripts/
+│   └── train_global_model.py    # Train global spatial model
+├── api/
+│   ├── app.py                   # FastAPI application
+│   └── dependencies.py          # Load và quản lý artifacts
 ├── results/
 │   ├── .gitkeep
 │   ├── rf_predictions.png       # Random Forest evaluation
@@ -300,6 +308,139 @@ A: Set random seed trong code (đã implement)
 
 **Q: Muốn dùng dữ liệu thực?**
 A: Replace `data/sample_data.csv` với data của bạn (cùng format)
+
+## 🌍 Global Spatial Model (Method A)
+
+### Giới thiệu
+
+Project hiện đã implement **Method A**: một global XGBoost model với spatial features (lat, lon). Model này có thể dự đoán AQI cho bất kỳ vị trí địa lý nào, không chỉ giới hạn ở một địa điểm cụ thể.
+
+### Training Global Model
+
+Để train global model với spatial features:
+
+```bash
+python scripts/train_global_model.py
+```
+
+Script này sẽ:
+- Load dữ liệu từ `data/sample_data.csv`
+- Tạo time features, lag features, rolling features và **spatial features** (lat, lon chuẩn hóa)
+- Split dữ liệu theo thời gian (70% train, 30% test)
+- Train XGBoost model
+- Save artifacts vào `models/`:
+  - `xgboost_global.pkl` - Model đã train
+  - `feature_columns_global.pkl` - Danh sách feature names
+  - `spatial_scaler.pkl` - StandardScaler cho lat/lon
+
+### Model Artifacts
+
+Sau khi train, các artifacts được lưu trong `models/`:
+
+```
+models/
+├── xgboost_global.pkl           # Trained XGBoost model
+├── feature_columns_global.pkl   # Feature names (163 features)
+└── spatial_scaler.pkl           # Spatial scaler cho lat/lon
+```
+
+### Sử dụng API
+
+API cung cấp endpoints để predict AQI dựa trên pollutants và vị trí địa lý.
+
+#### Khởi động API:
+
+```bash
+python -m uvicorn api.app:app --host 0.0.0.0 --port 8000
+```
+
+Hoặc:
+
+```bash
+python api/app.py
+```
+
+API sẽ tự động load các artifacts khi startup.
+
+#### API Endpoints:
+
+- **GET /** - Root endpoint với thông tin API
+- **GET /health** - Health check, kiểm tra artifacts đã load
+- **GET /model-info** - Thông tin chi tiết về model và features
+- **POST /predict** - Predict AQI từ input data
+
+#### Example Request:
+
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 106.7075,
+    "lon": 10.804,
+    "co": 704.51,
+    "no": 8.31,
+    "no2": 21.89,
+    "o3": 63.35,
+    "so2": 21.33,
+    "pm2_5": 25.13,
+    "pm10": 63.95,
+    "nh3": 9.5
+  }'
+```
+
+#### Example Response:
+
+```json
+{
+  "predicted_aqi": 3.05,
+  "lat_scaled": 0.0,
+  "lon_scaled": 0.0,
+  "model_name": "xgboost_global"
+}
+```
+
+### Kiến trúc
+
+```
+┌─────────────────┐
+│   Input Data    │
+│ (lat, lon, CO,  │
+│  NO, NO2, ...)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Spatial Scaler  │
+│ (lat/lon → std) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Feature Engineer │
+│ (time, lag,     │
+│  rolling feat.) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ XGBoost Global  │
+│     Model       │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Predicted AQI  │
+└─────────────────┘
+```
+
+### Features
+
+Global model sử dụng **163 features**, bao gồm:
+- **2 Spatial features**: lat_scaled, lon_scaled
+- **9 Time features**: hour, day_of_week, day, month, is_weekend, cyclical encodings
+- **48 Lag features**: 8 pollutants × 6 lags (1h, 2h, 3h, 6h, 12h, 24h)
+- **96 Rolling features**: 8 pollutants × 3 windows (6h, 12h, 24h) × 4 stats (mean, std, min, max)
+- **8 Original features**: co, no, no2, o3, so2, pm2_5, pm10, nh3
 
 ## 🎯 Future Improvements
 

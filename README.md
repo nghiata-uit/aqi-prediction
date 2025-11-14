@@ -13,7 +13,9 @@ Dự án này xây dựng các models Machine Learning để dự đoán chỉ s
 ### Features chính:
 
 - ✅ **3 Machine Learning models**: Random Forest, XGBoost, LSTM
+- ✅ **Global model với spatial features**: Spatial model sử dụng lat/lon features
 - ✅ **Feature engineering tự động** với lag và rolling statistics
+- ✅ **REST API** để dự đoán real-time với FastAPI
 - ✅ **Dự đoán 24h trước** với độ chính xác cao
 - ✅ **Jupyter Notebook** để phân tích và visualization
 - ✅ **Visualizations đẹp mắt** với matplotlib và seaborn
@@ -30,6 +32,10 @@ Dự án này xây dựng các models Machine Learning để dự đoán chỉ s
 
 ```
 aqi-prediction/
+├── api/
+│   ├── __init__.py
+│   ├── app.py                     # FastAPI application
+│   └── dependencies.py            # Model loading và dependencies
 ├── data/
 │   ├── .gitkeep
 │   └── sample_data.csv          # Dữ liệu mẫu (588 rows, hourly data)
@@ -39,11 +45,16 @@ aqi-prediction/
 │   ├── .gitkeep
 │   ├── random_forest.pkl        # Random Forest model
 │   ├── xgboost.pkl              # XGBoost model
+│   ├── xgboost_global.pkl       # Global XGBoost model với spatial features
+│   ├── feature_columns_global.pkl  # Feature columns cho global model
+│   ├── spatial_scaler.pkl       # Spatial scaler cho lat/lon
 │   └── scaler.pkl               # StandardScaler
+├── scripts/
+│   └── train_global_model.py    # Script train global model
 ├── src/
 │   ├── __init__.py
 │   ├── data_preprocessing.py    # Xử lý và làm sạch dữ liệu
-│   ├── feature_engineering.py   # Tạo features
+│   ├── feature_engineering.py   # Tạo features (bao gồm spatial features)
 │   ├── model_training.py        # Train models
 │   ├── model_evaluation.py      # Đánh giá models
 │   └── prediction.py            # Dự đoán 24h
@@ -168,9 +179,103 @@ print(predictions)
 - **Ưu điểm**: Deep learning cho time series
 - **Note**: Cần cài đặt TensorFlow
 
+### 4. Global XGBoost Model với Spatial Features (NEW)
+
+- **n_estimators**: 300
+- **max_depth**: 7
+- **learning_rate**: 0.05
+- **Spatial Features**: lat_scaled, lon_scaled, lat_lon_interaction
+- **Ưu điểm**: 
+  - Tích hợp spatial information (lat, lon) vào model
+  - Single global model thay vì nhiều location-specific models
+  - Production-ready với FastAPI REST API
+  - Backward compatible với legacy models
+- **Training**: `python scripts/train_global_model.py`
+- **Artifacts**:
+  - `models/xgboost_global.pkl` - Trained global model
+  - `models/feature_columns_global.pkl` - Feature columns ordering
+  - `models/spatial_scaler.pkl` - Spatial scaler cho lat/lon
+
+## 🌐 Global Model Training
+
+### Train Global Model với Spatial Features
+
+```bash
+python scripts/train_global_model.py
+```
+
+Script này sẽ:
+1. Load data từ `data/sample_data.csv`
+2. Tạo features bao gồm spatial features (lat_scaled, lon_scaled, lat_lon_interaction)
+3. Train XGBoost model với time-based split (70% train, 30% validation)
+4. Save artifacts vào `models/`:
+   - `xgboost_global.pkl`
+   - `feature_columns_global.pkl`
+   - `spatial_scaler.pkl`
+5. Print validation metrics (MAE, RMSE)
+
+### REST API Server
+
+Start FastAPI server:
+
+```bash
+cd api
+uvicorn app:app --reload
+```
+
+hoặc:
+
+```bash
+python -m uvicorn api.app:app --reload
+```
+
+API sẽ chạy tại `http://localhost:8000`
+
+#### API Endpoints:
+
+- `GET /` - API information
+- `GET /health` - Health check
+- `POST /predict` - Predict AQI
+
+#### Example Request:
+
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 10.804,
+    "lon": 106.7075,
+    "pollutants": {
+      "co": 704.51,
+      "no": 8.31,
+      "no2": 21.89,
+      "o3": 63.35,
+      "so2": 21.33,
+      "pm2_5": 25.13,
+      "pm10": 63.95,
+      "nh3": 9.5
+    },
+    "timestamp": "2020-11-01T00:00:00"
+  }'
+```
+
+#### Example Response:
+
+```json
+{
+  "aqi_prediction": 3.2,
+  "lat": 10.804,
+  "lon": 106.7075,
+  "timestamp": "2020-11-01T00:00:00",
+  "model_type": "global"
+}
+```
+
+Interactive API documentation: `http://localhost:8000/docs`
+
 ## 🔍 Feature Engineering
 
-Hệ thống tự động tạo 161 features từ dữ liệu gốc:
+Hệ thống tự động tạo 161+ features từ dữ liệu gốc:
 
 ### Time Features (9 features)
 - hour, day_of_week, day, month, is_weekend
@@ -182,7 +287,12 @@ Hệ thống tự động tạo 161 features từ dữ liệu gốc:
 
 ### Rolling Statistics (96 features)
 - Mean, Std, Min, Max cho 8 pollutants
-- Windows: 6h, 12h, 24h
+- Windows: 6h, 24h (có thể cấu hình)
+
+### Spatial Features (3 features) - NEW
+- lat_scaled: Scaled latitude
+- lon_scaled: Scaled longitude
+- lat_lon_interaction: Tương tác giữa lat và lon
 
 ### Original Features (8 features)
 - co, no, no2, o3, so2, pm2_5, pm10, nh3

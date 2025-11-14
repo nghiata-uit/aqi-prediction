@@ -193,8 +193,15 @@ async def predict_aqi(
             # Chuẩn bị features theo đúng thứ tự trong feature_columns_global
             if feature_cols is not None:
                 # Tạo các features cần thiết (simplified version cho real-time prediction)
-                # Note: Trong production, cần implement đầy đủ feature engineering
-                # hoặc cache các giá trị lag/rolling từ historical data
+                # 
+                # ⚠️ IMPORTANT LIMITATION: This simplified implementation uses 0.0 for missing
+                # lag and rolling features. In production, you should:
+                # 1. Maintain a time-series database with historical pollutant data
+                # 2. Query recent data to calculate actual lag/rolling features
+                # 3. Ensure feature distribution matches training data
+                # 
+                # Current implementation is for demonstration purposes only and will
+                # produce less accurate predictions than the trained model's validation metrics.
                 
                 # Đơn giản hóa: chỉ dùng current pollutants + spatial features + time features
                 from src.feature_engineering import create_time_features
@@ -207,7 +214,7 @@ async def predict_aqi(
                         available_features[col] = df_with_features[col].values[0]
                     else:
                         # Nếu feature không có (lag/rolling), dùng giá trị mặc định
-                        # Trong production, cần lấy từ historical data
+                        # ⚠️ WARNING: Using 0.0 for missing lag/rolling features
                         available_features[col] = 0.0
                 
                 # Tạo feature vector theo đúng thứ tự

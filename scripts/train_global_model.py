@@ -57,6 +57,8 @@ def train_global_model():
     df = preprocess_data(str(data_path))
     
     # Đổi tên cột datetime thành dt để phù hợp với engineer_features
+    # Note: engineer_features supports both 'datetime' and 'dt', but 'dt' is preferred
+    # for consistency with the new API and to avoid confusion with Python's datetime module
     if 'datetime' in df.columns:
         df = df.rename(columns={'datetime': 'dt'})
     

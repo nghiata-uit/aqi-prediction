@@ -301,11 +301,89 @@ A: Set random seed trong code (đã implement)
 **Q: Muốn dùng dữ liệu thực?**
 A: Replace `data/sample_data.csv` với data của bạn (cùng format)
 
+## 🌍 Global Spatial Model (Method A)
+
+### Training Global XGBoost Model với Spatial Features
+
+Project này bao gồm một global XGBoost model sử dụng spatial features (latitude, longitude) để dự đoán AQI cho bất kỳ location nào.
+
+#### Training Command
+
+```bash
+python scripts/train_global_model.py
+```
+
+#### Artifacts Generated
+
+Sau khi train, các artifacts sẽ được lưu trong `models/`:
+
+```
+models/
+├── xgboost_global.pkl           # Global XGBoost model
+├── feature_columns_global.pkl   # Danh sách feature columns (order matters)
+└── spatial_scaler.pkl           # StandardScaler cho lat/lon features
+```
+
+#### Model Details
+
+- **Model Type**: XGBoost Regressor
+- **Features**: Time features + Spatial features (lat, lon scaled) + Lag features + Rolling statistics
+- **Split**: Time-based 70/30 (train/test)
+- **Spatial Features**: Latitude và longitude được standardized using StandardScaler
+- **Training Data**: data/sample_data.csv
+
+#### Using the API
+
+1. **Start API Server**:
+```bash
+cd api
+python app.py
+```
+
+Server sẽ chạy tại `http://localhost:8000`
+
+2. **Health Check**:
+```bash
+curl http://localhost:8000/health
+```
+
+3. **Prediction**:
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 106.7075,
+    "lon": 10.804,
+    "co": 704.51,
+    "no": 8.31,
+    "no2": 21.89,
+    "o3": 63.35,
+    "so2": 21.33,
+    "pm2_5": 25.13,
+    "pm10": 63.95,
+    "nh3": 9.5
+  }'
+```
+
+#### API Endpoints
+
+- `GET /`: Root endpoint với API info
+- `GET /health`: Health check và artifacts status
+- `POST /predict`: Dự đoán AQI cho một location và pollutant data
+
+#### API Dependencies
+
+Cần cài thêm FastAPI và Uvicorn:
+
+```bash
+pip install fastapi uvicorn
+```
+
 ## 🎯 Future Improvements
 
 - [ ] Add more models (LightGBM, CatBoost)
 - [ ] Implement hyperparameter tuning
-- [ ] Add real-time prediction API
+- [x] Add real-time prediction API (Global Spatial Model)
 - [ ] Deploy with Docker
 - [ ] Add unit tests
 - [ ] Integrate with real AQI APIs

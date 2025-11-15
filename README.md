@@ -92,6 +92,8 @@ venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
+**Note:** This project requires NumPy < 2.0 due to compatibility with Prophet and other dependencies. The requirements.txt file ensures the correct version is installed.
+
 ### 4. Configure environment (optional)
 
 ```bash
@@ -613,6 +615,13 @@ RANDOM_SEED=42
 - ✅ Save models and scaler for **reuse**
 
 ### Common Issues
+
+**Q: NumPy 2.0 AttributeError: `np.float_` was removed?**
+A: Install the correct dependencies with: `pip install -r requirements.txt`. The project requires NumPy < 2.0 for compatibility with Prophet and other libraries. If you already have NumPy 2.0 installed, uninstall it first:
+```bash
+pip uninstall numpy
+pip install -r requirements.txt
+```
 
 **Q: LSTM/GRU training fails?**
 A: Ensure TensorFlow is installed: `pip install tensorflow>=2.10.0`

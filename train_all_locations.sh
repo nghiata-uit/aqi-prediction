@@ -209,10 +209,23 @@ try:
     import xgboost
     import tensorflow
     import prophet
+    
+    # Check NumPy version
+    numpy_version = tuple(map(int, numpy.__version__.split('.')[:2]))
+    if numpy_version >= (2, 0):
+        print('❌ NumPy 2.0+ detected, which is not compatible with Prophet')
+        print('Please downgrade NumPy: pip uninstall numpy && pip install \"numpy<2.0\"')
+        print('Or reinstall all dependencies: pip install -r requirements.txt')
+        sys.exit(1)
+    
     print('✅ All required packages are installed')
+    print(f'   NumPy version: {numpy.__version__} (compatible)')
 except ImportError as e:
     print(f'❌ Missing package: {e.name}')
     print('Please install required packages: pip install -r requirements.txt')
+    sys.exit(1)
+except Exception as e:
+    print(f'❌ Error checking dependencies: {str(e)}')
     sys.exit(1)
 " || exit 1
     

@@ -15,16 +15,27 @@ ENV/
 *.pkl
 *.h5
 *.pb
+*.json
+models/lat_*
+!models/.gitkeep
 
 # Data
 *.csv
 !sample_data.csv
+!data/.gitkeep
 
 # Results
 results/*.png
 results/*.jpg
+results/*.csv
 
 # IDE
 .vscode/
 .idea/
 *.swp
+
+# Logs
+*.log
+
+# API
+.env

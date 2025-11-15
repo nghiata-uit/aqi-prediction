@@ -103,18 +103,42 @@ cp .env.example .env
 
 ### Training Models
 
-Train models for all locations in your dataset:
+#### Option 1: Using the Shell Script (Recommended)
+
+The easiest way to train models for all locations:
+
+```bash
+# Train with default settings
+./train_all_locations.sh
+
+# Train with custom data file
+./train_all_locations.sh data/my_data.csv
+
+# Specify output directory
+./train_all_locations.sh -o my_models/ data/my_data.csv
+
+# See all options
+./train_all_locations.sh --help
+```
+
+The script will:
+- Check Python dependencies
+- Validate data file
+- Train models with progress logging
+- Save detailed log file
+- Show summary of trained models
+
+#### Option 2: Using Python Directly
 
 ```bash
 python train_models.py --data data/sample_data.csv --output models/
 ```
 
-This will:
+Both methods will:
 1. Load and preprocess data
 2. Group data by unique locations (lat, lon)
 3. For each location:
-   - Train 5 models: LSTM, GRU, Prophet, XGBoost, Random Forest
-   - Train an Ensemble model combining the best performers
+   - Train 6 models: LSTM, GRU, Prophet, XGBoost, Random Forest, Ensemble
    - Evaluate all models
    - Select and save the best model
    - Save performance metrics

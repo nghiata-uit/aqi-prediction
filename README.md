@@ -617,11 +617,20 @@ RANDOM_SEED=42
 ### Common Issues
 
 **Q: NumPy 2.0 AttributeError: `np.float_` was removed?**
-A: Install the correct dependencies with: `pip install -r requirements.txt`. The project requires NumPy < 2.0 for compatibility with Prophet and other libraries. If you already have NumPy 2.0 installed, uninstall it first:
+A: This error occurs when NumPy 2.0+ is installed, which is incompatible with Prophet. Fix it by:
 ```bash
-pip uninstall numpy
+# Complete reinstall (recommended)
+pip uninstall numpy pandas prophet -y
 pip install -r requirements.txt
+
+# Or quick fix
+pip uninstall numpy -y
+pip install "numpy<2.0"
 ```
+The training script will now check for this issue before running.
+
+**Q: "Importing plotly failed" warning?**
+A: This is a harmless warning from Prophet. Plotly is optional and doesn't affect training. You can ignore it or install plotly: `pip install plotly`
 
 **Q: LSTM/GRU training fails?**
 A: Ensure TensorFlow is installed: `pip install tensorflow>=2.10.0`

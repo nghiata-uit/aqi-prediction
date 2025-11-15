@@ -202,30 +202,45 @@ main() {
     
     $PYTHON_CMD -c "
 import sys
+
+# First check NumPy version before importing anything else
+try:
+    import numpy
+    numpy_version = tuple(map(int, numpy.__version__.split('.')[:2]))
+    if numpy_version >= (2, 0):
+        print('❌ NumPy 2.0+ detected, which is not compatible with Prophet')
+        print('Please downgrade NumPy:')
+        print('  pip uninstall numpy -y')
+        print('  pip install -r requirements.txt')
+        sys.exit(1)
+    print(f'✅ NumPy version: {numpy.__version__} (compatible)')
+except ImportError:
+    print('❌ NumPy not installed')
+    print('Please install required packages: pip install -r requirements.txt')
+    sys.exit(1)
+except Exception as e:
+    print(f'❌ Error checking NumPy: {str(e)}')
+    sys.exit(1)
+
+# Now check other packages
 try:
     import pandas
-    import numpy
     import sklearn
     import xgboost
     import tensorflow
     import prophet
     
-    # Check NumPy version
-    numpy_version = tuple(map(int, numpy.__version__.split('.')[:2]))
-    if numpy_version >= (2, 0):
-        print('❌ NumPy 2.0+ detected, which is not compatible with Prophet')
-        print('Please downgrade NumPy: pip uninstall numpy && pip install \"numpy<2.0\"')
-        print('Or reinstall all dependencies: pip install -r requirements.txt')
-        sys.exit(1)
-    
     print('✅ All required packages are installed')
-    print(f'   NumPy version: {numpy.__version__} (compatible)')
 except ImportError as e:
     print(f'❌ Missing package: {e.name}')
     print('Please install required packages: pip install -r requirements.txt')
     sys.exit(1)
 except Exception as e:
     print(f'❌ Error checking dependencies: {str(e)}')
+    print('This may be due to NumPy 2.0 compatibility issues.')
+    print('Try reinstalling dependencies:')
+    print('  pip uninstall numpy pandas prophet -y')
+    print('  pip install -r requirements.txt')
     sys.exit(1)
 " || exit 1
     

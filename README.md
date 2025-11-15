@@ -105,28 +105,42 @@ cp .env.example .env
 
 #### Option 1: Using the Shell Script (Recommended)
 
-The easiest way to train models for all locations:
+The shell script can train models for all CSV files in the data directory or specific files:
 
 ```bash
-# Train with default settings
+# Train ALL CSV files in data/ directory (default behavior)
 ./train_all_locations.sh
 
-# Train with custom data file
+# Train all CSV files explicitly
+./train_all_locations.sh --all
+
+# Train a specific CSV file
 ./train_all_locations.sh data/my_data.csv
 
+# Specify custom data directory containing multiple CSV files
+./train_all_locations.sh -d my_data_folder/
+
 # Specify output directory
-./train_all_locations.sh -o my_models/ data/my_data.csv
+./train_all_locations.sh -o my_models/
 
 # See all options
 ./train_all_locations.sh --help
 ```
 
 The script will:
+- **Automatically find all CSV files** in the data directory
 - Check Python dependencies
-- Validate data file
-- Train models with progress logging
-- Save detailed log file
-- Show summary of trained models
+- Validate data files
+- Train models for each file with progress logging
+- Save separate log files for each dataset
+- Show comprehensive summary of all trained models
+
+**Key Features:**
+- ✅ Processes multiple CSV files automatically
+- ✅ Individual log files per dataset
+- ✅ Progress tracking across all files
+- ✅ Summary of successful/failed trainings
+- ✅ Total model count across all datasets
 
 #### Option 2: Using Python Directly
 

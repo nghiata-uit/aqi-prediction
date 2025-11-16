@@ -7,3 +7,17 @@ matplotlib>=3.6.0
 seaborn>=0.12.0
 jupyter>=1.0.0
 joblib>=1.2.0
+
+# Mamba-SEUNet Dependencies
+torch>=2.0.0
+torchaudio>=2.0.0
+scipy>=1.10.0
+librosa>=0.10.0
+pesq>=0.0.4
+pystoi>=0.3.3
+soundfile>=0.12.0
+PyYAML>=6.0
+tensorboard>=2.13.0
+tqdm>=4.65.0
+mamba-ssm>=1.0.0
+causal-conv1d>=1.0.0

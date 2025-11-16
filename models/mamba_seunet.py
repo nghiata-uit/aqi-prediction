@@ -69,23 +69,21 @@ class MambaSEUNet(nn.Module):
         # Bottleneck dimension (last encoder channel)
         bottleneck_channels = encoder_channels[-1]
         
-        # Projection from 2D feature maps to 1D sequence for Mamba
-        # We'll flatten the frequency dimension and treat it as part of the feature dimension
-        self.to_sequence = nn.Identity()  # Placeholder for reshape operation
+        # Note: We'll flatten the frequency dimension with channels for Mamba processing
+        # This will be handled dynamically in forward pass
+        # The Mamba blocks will process sequences where each timestep contains all frequency bins
         
-        # TS-Mamba Blocks for temporal modeling
-        self.mamba_blocks = StackedMambaBlocks(
-            num_blocks=num_mamba_blocks,
-            dim=bottleneck_channels,
-            state_dim=mamba_state_dim,
-            conv_kernel=mamba_conv_kernel,
-            expand_factor=mamba_expand_factor,
-            bidirectional=True,
-            dropout=dropout,
-        )
+        # Placeholder for bottleneck feature dimension (will be channels * freq_bins)
+        # This will be determined at runtime based on input shape
+        self.bottleneck_channels = bottleneck_channels
+        self.mamba_state_dim = mamba_state_dim
+        self.mamba_conv_kernel = mamba_conv_kernel
+        self.mamba_expand_factor = mamba_expand_factor
+        self.num_mamba_blocks = num_mamba_blocks
+        self.mamba_dropout = dropout
         
-        # Projection from 1D sequence back to 2D feature maps
-        self.from_sequence = nn.Identity()  # Placeholder for reshape operation
+        # TS-Mamba Blocks will be created lazily on first forward pass
+        self.mamba_blocks = None
         
         # U-Net Decoder
         decoder_channels = encoder_channels[::-1]  # Reverse encoder channels
@@ -115,6 +113,19 @@ class MambaSEUNet(nn.Module):
         
         # Store spatial dimensions for reshaping
         b, c, h, w = bottleneck.shape
+        
+        # Initialize Mamba blocks on first forward pass with correct dimension
+        if self.mamba_blocks is None:
+            mamba_dim = c * h  # channels * freq
+            self.mamba_blocks = StackedMambaBlocks(
+                num_blocks=self.num_mamba_blocks,
+                dim=mamba_dim,
+                state_dim=self.mamba_state_dim,
+                conv_kernel=self.mamba_conv_kernel,
+                expand_factor=self.mamba_expand_factor,
+                bidirectional=True,
+                dropout=self.mamba_dropout,
+            ).to(x.device)
         
         # Reshape for Mamba: (batch, channels, freq, time) -> (batch, time, channels*freq)
         # Treat frequency bins as part of the feature dimension

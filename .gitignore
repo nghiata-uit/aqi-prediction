@@ -11,20 +11,47 @@ ENV/
 # Jupyter
 .ipynb_checkpoints/
 
-# Models
+# Models and Checkpoints
 *.pkl
 *.h5
 *.pb
+*.pt
+*.pth
+checkpoints/
+*.onnx
 
 # Data
 *.csv
 !sample_data.csv
+*.wav
+*.flac
+*.mp3
+data/VCTK*/
+data/VoiceBank*/
+data/DEMAND*/
 
 # Results
 results/*.png
 results/*.jpg
+results/
+runs/
+
+# TensorBoard
+events.out.tfevents.*
 
 # IDE
 .vscode/
 .idea/
 *.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
